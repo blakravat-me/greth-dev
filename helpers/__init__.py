@@ -1,0 +1,1 @@
+"""Utilitas kecil lintas modul."""
