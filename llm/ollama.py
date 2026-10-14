@@ -1,11 +1,10 @@
 """Klien Ollama berbasis httpx async: chat, web search/fetch, dan daftar model."""
 
-from functools import cache
 from typing import Any
 
 import httpx
 
-from greth.config import CLOUD_URL, Settings, settings
+from greth.config import CLOUD_URL, LlmConfig, settings
 
 
 class OllamaError(Exception):
@@ -13,22 +12,22 @@ class OllamaError(Exception):
 
 
 def _explain(exc: httpx.HTTPStatusError) -> str:
-    """Ringkas error HTTP; 401/403 diarahkan ke OLLAMA_API_KEY."""
+    """Ringkas error HTTP; 401/403 diarahkan ke --key."""
     status = exc.response.status_code
     if status in (401, 403):
-        return f"HTTP {status}: API key ditolak atau belum diatur (OLLAMA_API_KEY)"
+        return f"HTTP {status}: API key ditolak atau belum diberikan (--key)"
     return f"HTTP {status}: {exc.response.text[:200]}"
 
 
 class OllamaClient:
-    """Klien async; Authorization Bearer dikirim bila OLLAMA_API_KEY diatur."""
+    """Klien async; Authorization Bearer dikirim bila --key diberikan."""
 
-    def __init__(self, cfg: Settings, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(self, cfg: LlmConfig, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._cfg = cfg
-        self._http = httpx.AsyncClient(timeout=cfg.request_timeout, transport=transport)
+        self._http = httpx.AsyncClient(timeout=settings.request_timeout, transport=transport)
 
     def _headers(self) -> dict[str, str]:
-        key = self._cfg.ollama_api_key
+        key = self._cfg.api_key
         return {"Authorization": f"Bearer {key}"} if key else {}
 
     async def _request(self, method: str, url: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -44,8 +43,8 @@ class OllamaClient:
 
     def _require_key(self, feature: str) -> None:
         """Web search/fetch hanya tersedia di cloud dan wajib memakai API key."""
-        if not self._cfg.ollama_api_key:
-            raise OllamaError(f"{feature} membutuhkan OLLAMA_API_KEY")
+        if not self._cfg.api_key:
+            raise OllamaError(f"{feature} membutuhkan --key (API key Ollama)")
 
     async def chat(self, model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> dict[str, Any]:
         """POST /api/chat (non-stream); kembalikan objek message."""
@@ -53,11 +52,11 @@ class OllamaClient:
             "model": model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": self._cfg.temperature, "num_ctx": self._cfg.num_ctx},
+            "options": {"temperature": settings.temperature, "num_ctx": settings.num_ctx},
         }
         if tools:
             payload["tools"] = tools
-        data = await self._request("POST", f"{self._cfg.ollama_host}/api/chat", payload)
+        data = await self._request("POST", f"{self._cfg.base_url}/api/chat", payload)
         message = data.get("message")
         if not isinstance(message, dict):
             raise OllamaError("respons /api/chat tidak memuat message")
@@ -77,7 +76,7 @@ class OllamaClient:
 
     async def list_models(self) -> list[str]:
         """GET /api/tags; nama model yang tersedia di host."""
-        data = await self._request("GET", f"{self._cfg.ollama_host}/api/tags")
+        data = await self._request("GET", f"{self._cfg.base_url}/api/tags")
         return [m["name"] for m in data.get("models", [])]
 
     async def aclose(self) -> None:
@@ -85,7 +84,18 @@ class OllamaClient:
         await self._http.aclose()
 
 
-@cache
+_client: OllamaClient | None = None
+
+
+def configure_client(cfg: LlmConfig) -> OllamaClient:
+    """Buat klien tunggal proses dari konfigurasi CLI."""
+    global _client
+    _client = OllamaClient(cfg)
+    return _client
+
+
 def get_client() -> OllamaClient:
-    """Satu klien untuk seluruh proses."""
-    return OllamaClient(settings)
+    """Ambil klien tunggal; configure_client harus dipanggil lebih dulu."""
+    if _client is None:
+        raise RuntimeError("configure_client() belum dipanggil")
+    return _client

@@ -1,35 +1,37 @@
-"""Konfigurasi tunggal (source of truth) dengan override lewat environment."""
+"""Konfigurasi: LlmConfig dari CLI (base, key, model) dan konstanta tuning tetap."""
 
-import os
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from greth.types import AGENTS, AgentName
-
-LOCAL_URL = "http://localhost:11434"
+DEFAULT_BASE_URL = "http://localhost:11434"
+DEFAULT_MODEL = "nemotron-3-super:cloud"
 CLOUD_URL = "https://ollama.com"
-LOCAL_MODEL = "qwen3:4b"
-CLOUD_MODEL = "nemotron-3-super:cloud"
 
 
-def _host(raw: str) -> str:
-    """Normalkan host agar memiliki skema http(s) dan tanpa slash akhir."""
-    url = raw if raw.startswith(("http://", "https://")) else f"http://{raw}"
+def normalize_base_url(raw: str) -> str:
+    """Pastikan base url memiliki skema http(s) dan tanpa slash akhir."""
+    url = raw.strip()
+    url = url if url.startswith(("http://", "https://")) else f"http://{url}"
     return url.rstrip("/")
 
 
-def is_cloud(host: str) -> bool:
-    """True jika host adalah Ollama Cloud."""
-    return host == CLOUD_URL
+@dataclass(frozen=True, slots=True)
+class LlmConfig:
+    """Konfigurasi LLM: satu model dipakai semua agen."""
+
+    model: str = DEFAULT_MODEL
+    base_url: str = DEFAULT_BASE_URL
+    api_key: str | None = field(default=None, repr=False)
+
+    @property
+    def is_cloud(self) -> bool:
+        """True jika base url adalah Ollama Cloud."""
+        return self.base_url == CLOUD_URL
 
 
 @dataclass(frozen=True, slots=True)
 class Settings:
-    """Seluruh parameter runtime."""
+    """Konstanta tuning tetap (bukan konfigurasi LLM)."""
 
-    ollama_host: str
-    models: Mapping[AgentName, str]
-    ollama_api_key: str | None = field(default=None, repr=False)
     temperature: float = 0.0
     num_ctx: int = 8192
     request_timeout: float = 120.0
@@ -42,22 +44,5 @@ class Settings:
     page_limit: int = 4000
     result_limit: int = 8000
 
-    @property
-    def is_cloud(self) -> bool:
-        """True jika chat diarahkan ke Ollama Cloud."""
-        return is_cloud(self.ollama_host)
 
-    @classmethod
-    def from_env(cls) -> "Settings":
-        """Bangun Settings dari environment."""
-        key = (os.getenv("OLLAMA_API_KEY") or "").strip() or None
-        host = _host(os.getenv("OLLAMA_HOST") or (CLOUD_URL if key else LOCAL_URL))
-        base = os.getenv("GRETH_MODEL") or (CLOUD_MODEL if is_cloud(host) else LOCAL_MODEL)
-        return cls(
-            ollama_host=host,
-            ollama_api_key=key,
-            models={a: os.getenv(f"GRETH_{a.upper()}_MODEL") or base for a in AGENTS},
-        )
-
-
-settings = Settings.from_env()
+settings = Settings()

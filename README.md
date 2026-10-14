@@ -1,16 +1,24 @@
 # Greth
 
 Multi-agent berbasis workflow komandan militer: Leader -> Operator -> Evaluator
-(LangGraph + Ollama lewat httpx async).
+(LangGraph + Ollama lewat httpx async). Satu model dipakai semua agen.
 
 ## Jalankan
 
     make install
-    cp .env.example .env     # isi OLLAMA_API_KEY untuk Ollama Cloud
-    make run
+    make run                                   # lokal: http://localhost:11434, qwen3:8b
+    make run ARGS="--base https://ollama.com --key KEY --model gpt-oss:120b"
 
-Lokal tanpa API key: `ollama pull qwen3:4b`, lalu `make run`.
-Fitur `internet_search` dan `read_url` memakai Ollama web search/fetch API dan selalu butuh `OLLAMA_API_KEY`.
+Langsung tanpa make: `uv run python main.py --help`.
+
+## Opsi (tanpa environment variable)
+
+- `--base` base url Ollama (default `http://localhost:11434`).
+- `--key` API key Ollama (opsional), dikirim sebagai `Authorization: Bearer`.
+- `--model` model untuk semua agen (default `qwen3:8b`).
+
+`internet_search` dan `read_url` memakai Ollama web search/fetch API (`ollama.com`) dan selalu butuh `--key`.
+Parameter tetap (temperature, num_ctx, batas history, percobaan) ada di `greth/config.py`.
 
 ## Kontrol
 
@@ -18,14 +26,9 @@ Fitur `internet_search` dan `read_url` memakai Ollama web search/fetch API dan s
 - `ESC` menghentikan misi yang sedang berjalan (kembali ke input misi).
 - `Ctrl+C` keluar dari program.
 
-## Environment
+## Konteks LLM
 
-- `OLLAMA_API_KEY` dikirim sebagai `Authorization: Bearer`; bila diisi, host default `https://ollama.com`.
-- `OLLAMA_HOST` default `http://localhost:11434` (atau cloud bila ada API key).
-- `GRETH_MODEL` model semua agen (default `qwen3:4b` lokal, `nemotron-3-super:cloud` cloud).
-- `GRETH_LEADER_MODEL`, `GRETH_OPERATOR_MODEL`, `GRETH_EVALUATOR_MODEL` override per agen.
-
-Parameter lain (batas history, percobaan, timeout) ada di `greth/config.py`.
+Setiap input ke LLM diawali `Current date: <ISO 8601 UTC>` (input stage dan pesan koreksi retry).
 
 ## Perintah
 
