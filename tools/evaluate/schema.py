@@ -6,11 +6,13 @@ from helpers.clock import now_iso
 
 
 class EvaluateArgs(BaseModel):
-    """Argumen evaluate."""
+    """Argumen evaluate: success (OK/FAIL), next (lanjut strategi), to_leader (kembali ke leader)."""
 
     observed: str
     feedback: str
     success: bool = False
+    next: bool = False
+    to_leader: bool = False
 
 
 class Evaluation(EvaluateArgs):

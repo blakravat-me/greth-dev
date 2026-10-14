@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from greth.state import HistoryItem, MissionState
+from helpers.clock import now_iso
 
 
 @dataclass
@@ -17,14 +18,16 @@ class Session:
         state = MissionState(
             last_mission=self.last_mission,
             mission=mission,
+            mission_date=now_iso(),
             history=list(self.history),
+            queue=[],
             strategy=None,
             last_strategy=None,
             runs=[],
             last_result="",
             feedback="",
             attempts=0,
-            closed=False,
+            to_leader=False,
             completed=False,
         )
         self.last_mission = mission

@@ -1,5 +1,6 @@
 """Loop LLM bersama: selalu tool call, dengan retry bila tidak valid."""
 
+from collections.abc import Callable
 from typing import Any
 
 from langchain.messages import AnyMessage, HumanMessage, SystemMessage, ToolMessage
@@ -10,6 +11,8 @@ from greth.types import AgentName
 from helpers.clock import now_iso
 from helpers.prompts import load_prompt
 from tools.policy import OnResult, ToolCallError, dispatch, tools_for
+
+Validate = Callable[[list[tuple[str, Any]]], None]
 
 
 class AgentError(Exception):
@@ -22,16 +25,23 @@ def stamp(text: str) -> str:
 
 
 async def run_tools(
-    model: BaseChatModel, agent: AgentName, user: str, on_result: OnResult | None = None
+    model: BaseChatModel,
+    agent: AgentName,
+    user: str,
+    on_result: OnResult | None = None,
+    validate: Validate | None = None,
 ) -> list[tuple[str, Any]]:
-    """Panggil model sampai menghasilkan tool call valid; kembalikan keluaran tool."""
+    """Panggil model sampai menghasilkan tool call valid (dan lolos validate); kembalikan keluaran tool."""
     bound = model.bind_tools(tools_for(agent))
     messages: list[AnyMessage] = [SystemMessage(load_prompt(agent)), HumanMessage(stamp(user))]
     problem = ""
     for _ in range(settings.tool_retries + 1):
         reply = await bound.ainvoke(messages)
         try:
-            return await dispatch(agent, reply.tool_calls, on_result)
+            results = await dispatch(agent, reply.tool_calls, on_result)
+            if validate is not None:
+                validate(results)
+            return results
         except ToolCallError as exc:
             problem = str(exc)
         messages.append(reply)

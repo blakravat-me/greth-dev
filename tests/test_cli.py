@@ -11,13 +11,11 @@ def test_defaults() -> None:
     assert cfg.base_url == DEFAULT_BASE_URL == "http://localhost:11434"
     assert cfg.api_key is None
     assert cfg.model == DEFAULT_MODEL
-    assert not cfg.is_cloud
 
 
-def test_flags_and_cloud_detection() -> None:
+def test_flags() -> None:
     cfg = parse_args(["--base", "https://ollama.com", "--key", " secret ", "--model", "gpt-oss:120b"])
     assert (cfg.base_url, cfg.api_key, cfg.model) == ("https://ollama.com", "secret", "gpt-oss:120b")
-    assert cfg.is_cloud
     assert "secret" not in repr(cfg)
 
 

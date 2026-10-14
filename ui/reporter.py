@@ -10,11 +10,16 @@ from tools.mission_completed.schema import Completed
 from tools.policy import ToolOutput
 
 
+def _yn(value: bool) -> str:
+    """Terjemahkan boolean ke ya/tidak."""
+    return "ya" if value else "tidak"
+
+
 class ConsoleReporter:
     """Reporter yang menulis event ke terminal."""
 
     def strategy(self, item: Strategy) -> None:
-        """Tampilkan strategi Leader."""
+        """Tampilkan satu strategi dari Leader (bisa dipanggil beberapa kali per giliran)."""
         body = (
             f"[b]{escape(item.strategy)}[/b]\n"
             f"[dim]alasan:[/dim] {escape(item.reason)}\n"
@@ -30,9 +35,10 @@ class ConsoleReporter:
         )
 
     def evaluation(self, item: Evaluation) -> None:
-        """Tampilkan penilaian Evaluator."""
-        style, label = ("green", "BERHASIL") if item.success else ("yellow", "BELUM")
-        body = f"{escape(item.observed)}\n[dim]feedback:[/dim] {escape(item.feedback)}"
+        """Tampilkan penilaian Evaluator: status dan transisi (next, to_leader)."""
+        style, label = ("green", "OK") if item.success else ("yellow", "FAIL")
+        transition = f"next={_yn(item.next)} · to_leader={_yn(item.to_leader)}"
+        body = f"{escape(item.observed)}\n[dim]feedback:[/dim] {escape(item.feedback)}\n[dim]{transition}[/dim]"
         console.print(Panel(body, title=f"EVALUATOR · {label}", border_style=style))
 
     def completed(self, item: Completed) -> None:

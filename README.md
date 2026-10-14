@@ -14,11 +14,11 @@ Langsung tanpa make: `uv run python main.py --help`.
 ## Opsi (tanpa environment variable)
 
 - `--base` base url Ollama (default `http://localhost:11434`).
-- `--key` API key Ollama (opsional), dikirim sebagai `Authorization: Bearer`.
+- `--key` API key (opsional), dikirim sebagai `Authorization: Bearer` ke `--base` untuk chat.
 - `--model` model untuk semua agen (default `qwen3:8b`).
 
-`internet_search` dan `read_url` memakai Ollama web search/fetch API (`ollama.com`) dan selalu butuh `--key`.
-Parameter tetap (temperature, num_ctx, batas history, percobaan) ada di `greth/config.py`.
+`internet_search` memakai DuckDuckGo (`ddgs`) dan `read_url` memakai HTTP biasa; keduanya tidak
+butuh `--key`. Parameter tetap (temperature, num_ctx, batas history, percobaan) ada di `greth/config.py`.
 
 ## Kontrol
 
@@ -26,9 +26,22 @@ Parameter tetap (temperature, num_ctx, batas history, percobaan) ada di `greth/c
 - `ESC` menghentikan misi yang sedang berjalan (kembali ke input misi).
 - `Ctrl+C` keluar dari program.
 
+## Alur Leader -> Operator -> Evaluator
+
+- **Leader** memanggil `add_strategy` satu kali atau beberapa kali sekaligus, membentuk antrean
+  strategi (strategi pertama dikerjakan dulu), atau memanggil `mission_completed` sendirian.
+- **Operator** mengeksekusi Current Strategy lewat tool (`internet_search`, `read_url`, `write_note`).
+- **Evaluator** memanggil `evaluate(observed, feedback, success, next, to_leader)`:
+  - `success`: status `OK`/`FAIL` strategi saat ini.
+  - `next`: tutup strategi ini dan lanjut ke strategi berikutnya di antrean.
+  - `to_leader`: kembali ke Leader (strategi berjalan otomatis ditutup, antrean sisa dibatalkan).
+  - Jaring pengaman: jika gagal berulang sampai batas (`max_attempts`), strategi dipaksa ditutup
+    sebagai `FAIL` walau Evaluator belum memilih `next=true` (anti-deadlock).
+
 ## Konteks LLM
 
-Setiap input ke LLM diawali `Current date: <ISO 8601 UTC>` (input stage dan pesan koreksi retry).
+Setiap input ke LLM diawali `Current date: <ISO 8601 UTC>` (waktu panggilan). Setiap strategi dan
+History membawa `Date` masing-masing (waktu dibuat/ditutup).
 
 ## Perintah
 

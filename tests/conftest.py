@@ -30,4 +30,12 @@ class ScriptedModel(BaseChatModel):
 
 def call(name: str, **args: Any) -> AIMessage:
     """AIMessage berisi satu tool call."""
-    return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": f"id-{name}"}])
+    return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": f"id-{name}-0"}])
+
+
+def calls(*pairs: tuple[str, dict[str, Any]]) -> AIMessage:
+    """AIMessage berisi beberapa tool call sekaligus (untuk Leader multi-strategi)."""
+    return AIMessage(
+        content="",
+        tool_calls=[{"name": name, "args": args, "id": f"id-{name}-{i}"} for i, (name, args) in enumerate(pairs)],
+    )

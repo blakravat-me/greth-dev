@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from helpers.clock import now_iso
 
-StrategyType = Literal["recon", "execute", "verify", "report"]
+StrategyType = Literal["RECON", "EXPLOIT", "POST-EXPLOIT", "REPORT"]
 
 
 class AddStrategyArgs(BaseModel):

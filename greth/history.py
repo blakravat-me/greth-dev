@@ -10,7 +10,10 @@ def push(history: list[HistoryItem], item: HistoryItem) -> list[HistoryItem]:
 
 
 def render(history: list[HistoryItem]) -> str:
-    """Format riwayat bernomor untuk input Leader."""
+    """Format riwayat bernomor dengan status [OK/FAIL] untuk input Leader."""
     if not history:
         return "-"
-    return "\n".join(f"{i}. Strategy: {h['strategy']} | Observed: {h['observed']}" for i, h in enumerate(history, start=1))
+    return "\n".join(
+        f"{i}. [{h['status']}] Strategy: {h['strategy']} | Observed: {h['observed']} ({h['date']})"
+        for i, h in enumerate(history, start=1)
+    )

@@ -3,8 +3,7 @@
 from dataclasses import dataclass, field
 
 DEFAULT_BASE_URL = "http://localhost:11434"
-DEFAULT_MODEL = "nemotron-3-super:cloud"
-CLOUD_URL = "https://ollama.com"
+DEFAULT_MODEL = "qwen3:8b"
 
 
 def normalize_base_url(raw: str) -> str:
@@ -21,11 +20,6 @@ class LlmConfig:
     model: str = DEFAULT_MODEL
     base_url: str = DEFAULT_BASE_URL
     api_key: str | None = field(default=None, repr=False)
-
-    @property
-    def is_cloud(self) -> bool:
-        """True jika base url adalah Ollama Cloud."""
-        return self.base_url == CLOUD_URL
 
 
 @dataclass(frozen=True, slots=True)

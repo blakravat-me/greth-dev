@@ -11,5 +11,5 @@ def after_leader(state: MissionState) -> str:
 
 
 def after_evaluator(state: MissionState) -> str:
-    """Evaluator -> Leader jika strategi ditutup, selain itu -> Operator."""
-    return "leader" if state["closed"] else "operator"
+    """Evaluator -> Leader jika to_leader, selain itu -> Operator."""
+    return "leader" if state["to_leader"] else "operator"

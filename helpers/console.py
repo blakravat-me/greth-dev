@@ -11,11 +11,6 @@ def show_banner() -> None:
     console.print("[bold]Greth[/bold] · ESC = hentikan misi · Ctrl+C = keluar\n")
 
 
-def show_warning(text: str) -> None:
-    """Tampilkan peringatan non-fatal."""
-    console.print(f"[yellow]Peringatan:[/yellow] {escape(text)}\n")
-
-
 def show_stopped() -> None:
     """Tampilkan misi dihentikan pengguna."""
     console.print("[bold yellow]Misi dihentikan (ESC).[/bold yellow]\n")

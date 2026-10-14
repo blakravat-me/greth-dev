@@ -1,10 +1,10 @@
-"""Klien Ollama berbasis httpx async: chat, web search/fetch, dan daftar model."""
+"""Klien Ollama berbasis httpx async: chat dan daftar model (--base, --key saja)."""
 
 from typing import Any
 
 import httpx
 
-from greth.config import CLOUD_URL, LlmConfig, settings
+from greth.config import LlmConfig, settings
 
 
 class OllamaError(Exception):
@@ -27,8 +27,7 @@ class OllamaClient:
         self._http = httpx.AsyncClient(timeout=settings.request_timeout, transport=transport)
 
     def _headers(self) -> dict[str, str]:
-        key = self._cfg.api_key
-        return {"Authorization": f"Bearer {key}"} if key else {}
+        return {"Authorization": f"Bearer {self._cfg.api_key}"} if self._cfg.api_key else {}
 
     async def _request(self, method: str, url: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Kirim request dan kembalikan JSON; semua error menjadi OllamaError."""
@@ -40,11 +39,6 @@ class OllamaClient:
             raise OllamaError(_explain(exc)) from exc
         except (httpx.HTTPError, ValueError) as exc:
             raise OllamaError(f"{type(exc).__name__} saat menghubungi {url}") from exc
-
-    def _require_key(self, feature: str) -> None:
-        """Web search/fetch hanya tersedia di cloud dan wajib memakai API key."""
-        if not self._cfg.api_key:
-            raise OllamaError(f"{feature} membutuhkan --key (API key Ollama)")
 
     async def chat(self, model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> dict[str, Any]:
         """POST /api/chat (non-stream); kembalikan objek message."""
@@ -61,18 +55,6 @@ class OllamaClient:
         if not isinstance(message, dict):
             raise OllamaError("respons /api/chat tidak memuat message")
         return message
-
-    async def web_search(self, query: str, max_results: int) -> list[dict[str, Any]]:
-        """POST ollama.com/api/web_search; hasil: title, url, content."""
-        self._require_key("web_search")
-        payload = {"query": query, "max_results": min(max_results, 10)}
-        data = await self._request("POST", f"{CLOUD_URL}/api/web_search", payload)
-        return list(data.get("results", []))
-
-    async def web_fetch(self, url: str) -> dict[str, Any]:
-        """POST ollama.com/api/web_fetch; hasil: title, content, links."""
-        self._require_key("web_fetch")
-        return await self._request("POST", f"{CLOUD_URL}/api/web_fetch", {"url": url})
 
     async def list_models(self) -> list[str]:
         """GET /api/tags; nama model yang tersedia di host."""

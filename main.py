@@ -8,7 +8,7 @@ from greth.graph import build_graph
 from greth.health import check_ollama
 from greth.mission import run_mission
 from greth.session import Session
-from helpers.console import show_banner, show_goodbye, show_warning
+from helpers.console import show_banner, show_goodbye
 from llm.factory import build_model
 from llm.ollama import get_client
 from ui.mission_input import ask_mission
@@ -21,8 +21,6 @@ async def main(cfg: LlmConfig) -> None:
     try:
         if problems := await check_ollama(cfg):
             raise SystemExit("\n".join(problems))
-        if not cfg.api_key:
-            show_warning("--key belum diberikan: internet_search dan read_url akan gagal.")
         graph = build_graph(model, ConsoleReporter())
         session = Session()
         show_banner()
